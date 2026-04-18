@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zone Detector - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0f0f0f; font-family: Arial, sans-serif; color: #fff; }
+        .header {
+            background: #1a1a1a;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .header h1 { font-size: 18px; color: #e63946; }
+        .header a { color: #888; text-decoration: none; font-size: 14px; }
+        .header a:hover { color: #fff; }
+        .container { padding: 24px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            overflow: hidden;
+        }
+        .card-title {
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #888;
+            border-bottom: 1px solid #2a2a2a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .feed { position: relative; }
+        .feed img { width: 100%; display: block; cursor: crosshair; }
+        .zone-controls { padding: 16px 18px; }
+        .zone-controls p { font-size: 13px; color: #888; margin-bottom: 12px; }
+        .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-red { background: #e63946; color: white; }
+        .btn-gray { background: #2a2a2a; color: #ccc; }
+        .btn-green { background: #2d6a4f; color: #fff; }
+        .btn-red:hover { background: #c1121f; }
+        .btn-gray:hover { background: #3a3a3a; }
+        .btn-green:hover { background: #1b4332; }
+        #zone-status { font-size: 12px; color: #4caf50; margin-top: 10px; min-height: 18px; }
+        #complete-btn { display: none; }
+        .alert-list { padding: 0; max-height: 500px; overflow-y: auto; }
+        .alert-item {
+            padding: 14px 18px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .alert-info .person { color: #e63946; font-weight: bold; font-size: 13px; }
+        .alert-info .time { color: #888; font-size: 12px; margin-top: 2px; }
+        .view-btn {
+            font-size: 12px;
+            color: #4a9eff;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .view-btn:hover { text-decoration: underline; }
+        .clip-player {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 6px;
+            display: none;
+            background: #000;
+        }
+        .no-alerts { padding: 24px 18px; color: #888; font-size: 13px; text-align: center; }
+        .clear-btn {
+            display: block;
+            width: calc(100% - 36px);
+            margin: 12px 18px;
+            padding: 10px;
+            background: #3a0000;
+            color: #ff6b6b;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .clear-btn:hover { background: #5a0000; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Zone Detector</h1>
+        <a href="/logout">Logout</a>
+    </div>
+    <div class="container">
+        <div class="grid">
+            <div>
+                <div class="card feed">
+                    <div class="card-title">Live Feed</div>
+                    <img id="feed-img" src="/video_feed" alt="Live Feed"/>
+                </div>
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-title">Zone Controls</div>
+                    <div class="zone-controls">
+                        <p>Draw a restricted zone on the live feed. Works on both laptop and phone.</p>
+                        <div class="btn-row">
+                            <button class="btn btn-red" onclick="startDrawing()">Draw Zone</button>
+                            <button class="btn btn-green" id="complete-btn" onclick="completeZone()">Complete Zone</button>
+                            <button class="btn btn-gray" onclick="clearZone()">Clear Zone</button>
+                        </div>
+                        <div id="zone-status"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Alert Log</div>
+                <div class="alert-list" id="alert-list">
+                    {% if alerts %}
+                        {% for alert in alerts %}
+                        <div class="alert-item">
+                            <div class="alert-top">
+                                <div class="alert-info">
+                                    <div class="person">Intruder #{{ alert[1] }}</div>
+                                    <div class="time">{{ alert[2] }}</div>
+                                </div>
+                                <button class="view-btn" onclick="toggleClip(this, '{{ alert[3] }}')">View Clip</button>
+                            </div>
+                            <video class="clip-player" controls>
+                                <source src="/alerts/{{ alert[3] }}" type="video/mp4">
+                            </video>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-alerts" id="no-alerts">No alerts yet</div>
+                    {% endif %}
+                </div>
+                <button class="clear-btn" onclick="clearAlerts()">Clear All Alerts</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let drawing = false;
+        let points = [];
+
+        function startDrawing() {
+            drawing = true;
+            points = [];
+            document.getElementById('complete-btn').style.display = 'block';
+            document.getElementById('zone-status').innerText = 'Tap on the feed to place points. Tap Complete Zone when done.';
+        }
+
+        function completeZone() {
+            if (points.length < 3) {
+                document.getElementById('zone-status').innerText = 'Need at least 3 points first.';
+                return;
+            }
+            fetch('/set_zone', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({points: points})
+            }).then(() => {
+                drawing = false;
+                document.getElementById('complete-btn').style.display = 'none';
+                document.getElementById('zone-status').innerText = `Zone set with ${points.length} points.`;
+            });
+        }
+
+        function clearZone() {
+            points = [];
+            drawing = false;
+            document.getElementById('complete-btn').style.display = 'none';
+            fetch('/set_zone', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({points: []})
+            });
+            document.getElementById('zone-status').innerText = 'Zone cleared.';
+        }
+
+        document.getElementById('feed-img').addEventListener('click', function(e) {
+            if (!drawing) return;
+            const rect = this.getBoundingClientRect();
+            const scaleX = 640 / rect.width;
+            const scaleY = 480 / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            points.push({x: Math.round(x), y: Math.round(y)});
+            document.getElementById('zone-status').innerText = `${points.length} points placed. Tap Complete Zone when done.`;
+        });
+
+        document.getElementById('feed-img').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            if (!drawing || points.length < 3) return;
+            completeZone();
+        });
+
+        function toggleClip(btn, filename) {
+            const video = btn.closest('.alert-item').querySelector('.clip-player');
+            if (video.style.display === 'block') {
+                video.style.display = 'none';
+                video.pause();
+                btn.innerText = 'View Clip';
+            } else {
+                video.style.display = 'block';
+                btn.innerText = 'Hide Clip';
+            }
+        }
+
+        function clearAlerts() {
+            if (!confirm('Clear all alerts?')) return;
+            fetch('/clear_alerts', {method: 'POST'})
+                .then(() => {
+                    document.getElementById('alert-list').innerHTML = '<div class="no-alerts">No alerts yet</div>';
+                });
+        }
+
+        setInterval(() => {
+            fetch('/alerts_data')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.alerts.length === 0) return;
+                    const list = document.getElementById('alert-list');
+                    const noAlerts = document.getElementById('no-alerts');
+                    if (noAlerts) noAlerts.remove();
+                    data.alerts.forEach(alert => {
+                        if (!document.getElementById('alert-' + alert[0])) {
+                            const div = document.createElement('div');
+                            div.className = 'alert-item';
+                            div.id = 'alert-' + alert[0];
+                            div.innerHTML = `
+                                <div class="alert-top">
+                                    <div class="alert-info">
+                                        <div class="person">Intruder #${alert[1]}</div>
+                                        <div class="time">${alert[2]}</div>
+                                    </div>
+                                    <button class="view-btn" onclick="toggleClip(this, '${alert[3]}')">View Clip</button>
+                                </div>
+                                <video class="clip-player" controls>
+                                    <source src="/alerts/${alert[3]}" type="video/mp4">
+                                </video>`;
+                            list.insertBefore(div, list.firstChild);
+                        }
+                    });
+                });
+        }, 5000);
+    </script>
+</body>
+</html>
